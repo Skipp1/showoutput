@@ -37,7 +37,7 @@
 "display"               { ECHO; return BOX_DISPLAY; }
 "set"                   { ECHO; return GLUE_SET;    }
 "shifted"               { ECHO; return GLUE_SHIFT;  }
-(setlanguage|mark)      { ECHO; return SETLANG;     }
+(setlanguage|marks?)    { ECHO; return SETLANG;     }
 pdf[a-z]+               { ECHO; return PDF;         }
 "rule"                  { ECHO; return RULE;        }
 "leaders"               { ECHO; return LEADERS;     }
