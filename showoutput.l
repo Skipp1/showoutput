@@ -3,6 +3,7 @@
 #include "y.tab.h"
 #include "showoutput.h"
 
+// #define ECHO printf("%s", yytext);
 #define ECHO ;
 %}
 
@@ -32,7 +33,7 @@
 "glue"          { ECHO; return GLUE;          }
 "minus"         { ECHO; return GLUE_MINUS;    }
 
-"kern"                    { ECHO; return KERN;        }
+"kern"                  { ECHO; return KERN;        }
 "penalty"               { ECHO; return PENALTY;     }
 "display"               { ECHO; return BOX_DISPLAY; }
 "set"                   { ECHO; return GLUE_SET;    }
@@ -40,7 +41,7 @@
 (setlanguage|marks?)    { ECHO; return SETLANG;     }
 pdf[a-z]+               { ECHO; return PDF;         }
 "rule"                  { ECHO; return RULE;        }
-"leaders"               { ECHO; return LEADERS;     }
+[xc]?leaders            { ECHO; return LEADERS;     }
 
 matho(n|ff) {
 	yytext_dup(yytext);
@@ -71,7 +72,7 @@ matho(n|ff) {
 	return INT;
 }
                   
-(O?TS?[1-7]|X2|OM[LSX]|LY1|LV1|LGR|PD1|P?U) {
+(O?TS?[1-7]|X2|[OL]M[LSX]|LY1|LV1|LGR|PD1|P?U) {
 	yytext_dup(yytext);
 	ECHO;
 	return FONT_ENC;

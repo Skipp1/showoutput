@@ -116,7 +116,7 @@ static void print_glue( const node_t *node );
 static void print_kern( const node_t *node );
 static void print_char( const struct text_data *t, size_t enc_pos );
 static void print_text( const node_t *node );
-static void print_tree( const node_t *node);
+static void print_tree( const node_t *node, int *discretionary_skip_next);
 static void mk_char( char *enc, char *family, char *series, char *shape, char *asize, char *text_data, bool lig );
 static void mk_glue( char *target, char* skip );
 static void mk_kern( char *target );
@@ -389,7 +389,8 @@ int main(int argc, char **argv) {
 	
 	fclose(yyin);
 	
-	print_tree( &top_level );
+	int z[1] = {0};
+	print_tree( &top_level, z );
 	return 0;
 }
 
@@ -461,21 +462,20 @@ static int print_discretionary( int i, const node_t *node ) {
 			if ( node->parent->N <= i+1 ) {
 				return 0;
 			}
-			if ( node->parent->children[i+1].type != 6 ) {
+			if ( node->parent->children[i+1].type != text ) {
 				return 0;
 			}
 			struct text_data *t = (node->parent->children[i+1].node_data);
 			if ( t->text[0] == '-' ) {
-				printf(" ");
-				return 1;
+				return 3;
 			}
 			return 0;
 		}
 		
-		if ( node->children[0].type == 6 ) {
+		if ( node->children[0].type == text ) {
 			struct text_data *t = (node->children[0].node_data);
 			if ( t->text[0] == '-' ) {
-					return 2;
+					return 0;
 			}
 		}
 	}
@@ -487,7 +487,7 @@ static void print_glue( const node_t *node ) {
 	if ( g->skip == NULL ) { 
 		/* if NULL, then it is pure glue */
 		if ( g->target > 0.1 ) {
-			if (node->parent->type == 1) {
+			if (node->parent->type == vbox) {
 				printf("\n");
 			}	else {
 				printf(" ");
@@ -530,6 +530,8 @@ static void print_char( const struct text_data *t, size_t enc_pos ) {
 		c = OML_ENC[enc_pos];
 	} else if ( strcmp(t->enc, "OMS") == 0 ) {
 		c = OMS_ENC[enc_pos];
+	} else if ( strcmp(t->enc, "LMS") == 0 ) {
+		c = T1_ENC[enc_pos];
 	} else if ( strcmp(t->enc, "OMX") == 0 ) {
 		c = OMX_ENC[enc_pos];
 	} else if ( strcmp(t->enc, "LY1") == 0 ) {
@@ -558,62 +560,67 @@ static void print_text( const node_t *node ) {
 }
 
 static void print_leaders( const node_t *node ) {
+	int z[1] = {0};
 	if ( node->N == 0 ) {
 		fprintf(stderr, "leader with no children??");
 	}
 	for (int i=0; i<7; i++) {
-		print_tree(node);
+		print_tree(node, z);
 	}
 	return;
 }
 
-static void print_tree( const node_t *node) {
+static void print_tree( const node_t *node, int *discretionary_skip_next) {
 	node_t *n;
-	int discretionary_skip_next = 0;
 	bool mathmode = false;
 	
 	for (int i=0; i<node->N; i++) {
 		n = &(node->children[i]);
 		
-		if ( discretionary_skip_next == 1 ) {
-			continue;
-			discretionary_skip_next = 0;
-		}
+
 		
 		switch ( n->type ) {
-			case (0): // top
+			case (top):
 				break;
-			case (1): // vbox
-				print_tree(n);
+			case (vbox):
+				print_tree(n, discretionary_skip_next);
 				break;
-			case (2): // hbox
-				print_tree(n);
+			case (hbox):
+				print_tree(n, discretionary_skip_next);
 				break;
-			case (3): // leaders
+			case (leaders):
 				print_leaders(n);
 				break;
-			case (4): // discretionary
-				discretionary_skip_next = print_discretionary(i, n);
+			case (discretionary):
+				*discretionary_skip_next = print_discretionary(i, n);
 				break;
-			case (5): // glue 
+			case (glue):
+				if ( discretionary_skip_next[0] > 0 ) {
+					discretionary_skip_next[0] = discretionary_skip_next[0]-1;
+					continue;
+				}
 				print_glue(n);
 				break;
-			case (6): // text
+			case (text):
+				if ( discretionary_skip_next[0] > 0 ) {
+					discretionary_skip_next[0] = discretionary_skip_next[0]-1;
+					continue;
+				}
 				print_text(n);
 				break;
-			case (7): // kern
+			case (kern):
 				print_kern(n);
 				break;
-			case (8): // math
+			case (math):
 				struct mathmode_data *d = (struct mathmode_data *)n->node_data;
 				mathmode = d->mode;
 				break;
-			case (9): // rule
+			case (rule):
 // 				if ( mathmode ) {
 // 					printf("/");
 // 				}
 				break;
-			case (10): // ignored
+			case (ignored):
 				break;
 		}
 	}
@@ -734,7 +741,7 @@ static void indentation( size_t dotnum ) {
 		fprintf(stderr, "\t Unexpected indent, expected %d, got %d\n", cur_node->depth, dotnum );
 	} else {
 		for( int i=0; i< cur_node->depth - dotnum; i++ ) {
-			if ( cur_node->type == 0 ) {
+			if ( cur_node->type == top ) {
 				fprintf(stderr, "\t Trying to get parent of top level node!!!");
 				exit(1);
 			}
