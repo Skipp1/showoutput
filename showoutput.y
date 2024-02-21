@@ -218,6 +218,8 @@ char : FONT_ENC '/' font_family '/' FONT_SERIES '/' FONT_SHAPE '/' font_size ' '
      { mk_char(strdup($1), strdup($3), strdup($5), strdup($7), strdup($9), strdup($16), false); }
      | FONT_ENC '/' font_family '/' FONT_SERIES '/' FONT_SHAPE '/' font_size ' ' '(' INT ')' ' ' printable ' ' '(' LIGATURE ' ' string ')'
      { mk_char(strdup($1), strdup($3), strdup($5), strdup($7), strdup($9), strdup($20), false); }
+     |  FONT_ENC '/' font_family '/' FONT_SERIES '/' FONT_SHAPE '/' font_size ' ' '\n'
+     { mk_char(strdup($1), strdup($3), strdup($5), strdup($7), strdup($9), strdup($11), false); }
      ;
 
 font_size : INT
